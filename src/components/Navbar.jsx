@@ -1,21 +1,46 @@
 import { Link, useLocation } from 'react-router-dom'
 import { auth } from '../firebase/firebase'
 import { signOut } from 'firebase/auth'
+import { useAuth } from '../context/AuthContext'
 import '../styles/Navbar.css'
 
-function Navbar({ user }) {
+function Navbar() {
+  const { user, userRole } = useAuth()
   const location = useLocation()
 
-  const handleLogout = async () => {
-    await signOut(auth)
-  }
+  const handleLogout = async () => { await signOut(auth) }
 
-  const navItems = [
-    { path: '/dashboard',    icon: '📊', label: 'Dashboard'    },
-    { path: '/appointments', icon: '📅', label: 'Appointments'  },
-    { path: '/lab-reports',  icon: '🧪', label: 'Lab Reports'   },
-    { path: '/inventory',    icon: '📦', label: 'Inventory'     },
+  const doctorLinks = [
+    { path: '/doctor/dashboard', icon: '📊', label: 'Dashboard' },
+    { path: '/doctor/appointments', icon: '📅', label: 'Appointments' },
+    { path: '/doctor/availability', icon: '🗓️', label: 'Availability' },
+    { path: '/doctor/prescriptions', icon: '💊', label: 'Prescriptions' },
+    { path: '/doctor/profile', icon: '👤', label: 'Profile' },
   ]
+  const patientLinks = [
+    { path: '/patient/dashboard', icon: '📊', label: 'Dashboard' },
+    { path: '/patient/book', icon: '➕', label: 'Book Appointment' },
+    { path: '/patient/appointments', icon: '📅', label: 'My Appointments' },
+    { path: '/patient/prescriptions', icon: '💊', label: 'Prescriptions' },
+  ]
+  const receptionLinks = [
+    { path: '/reception/dashboard', icon: '📊', label: 'Dashboard' },
+    { path: '/reception/appointments', icon: '📋', label: 'All Appointments' },
+    { path: '/reception/doctors', icon: '👨‍⚕️', label: 'Doctors' },
+  ]
+
+  const navItems =
+    userRole === 'doctor' ? doctorLinks :
+    userRole === 'patient' ? patientLinks :
+    userRole === 'reception' ? receptionLinks :
+    [
+      { path: '/dashboard', icon: '📊', label: 'Dashboard' },
+      { path: '/appointments', icon: '📅', label: 'Appointments' },
+      { path: '/lab-reports', icon: '🧪', label: 'Lab Reports' },
+      { path: '/inventory', icon: '📦', label: 'Inventory' },
+    ]
+
+  const roleLabel = userRole === 'doctor' ? '👨‍⚕️ Doctor' : userRole === 'patient' ? '🧑 Patient' : userRole === 'reception' ? '🗂️ Reception' : 'Admin'
 
   return (
     <div className="navbar">
@@ -23,7 +48,6 @@ function Navbar({ user }) {
         <span className="logo-icon">🏥</span>
         <span className="logo-text">ClinicCare</span>
       </div>
-
       <nav className="navbar-links">
         {navItems.map((item) => (
           <Link
@@ -36,18 +60,15 @@ function Navbar({ user }) {
           </Link>
         ))}
       </nav>
-
       <div className="navbar-bottom">
         <div className="user-info">
           <div className="user-avatar">👤</div>
           <div className="user-details">
-            <p className="user-email">{user.email}</p>
-            <p className="user-role">Admin</p>
+            <p className="user-email">{user?.email}</p>
+            <p className="user-role">{roleLabel}</p>
           </div>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          🚪 Logout
-        </button>
+        <button className="logout-btn" onClick={handleLogout}>🚪 Logout</button>
       </div>
     </div>
   )

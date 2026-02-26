@@ -1,45 +1,110 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { auth } from './firebase/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
+import Navbar from './components/Navbar'
 import Dashboard from './pages/Dashboard'
 import Appointments from './pages/Appointments'
 import LabReports from './pages/LabReports'
 import Inventory from './pages/Inventory'
-import Navbar from './components/Navbar'
+// Doctor
+import DoctorDashboard from './pages/doctor/DoctorDashboard'
+import DoctorAvailability from './pages/doctor/DoctorAvailability'
+import DoctorAppointments from './pages/doctor/DoctorAppointments'
+import DoctorPrescriptions from './pages/doctor/DoctorPrescriptions'
+import DoctorProfile from './pages/doctor/DoctorProfile'
+// Patient
+import PatientDashboard from './pages/patient/PatientDashboard'
+import BookAppointment from './pages/patient/BookAppointment'
+import PatientAppointments from './pages/patient/PatientAppointments'
+import PatientPrescriptions from './pages/patient/PatientPrescriptions'
+// Reception
+import ReceptionDashboard from './pages/reception/ReceptionDashboard'
+import ReceptionAppointments from './pages/reception/ReceptionAppointments'
+import ReceptionDoctors from './pages/reception/ReceptionDoctors'
 import './App.css'
 
-function App() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+function RoleRedirect() {
+  const { user, userRole } = useAuth()
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
-      setLoading(false)
-    })
-    return () => unsubscribe()
-  }, [])
+  if (!user) return <Navigate to="/" replace />
 
-  if (loading) return (
-    <div className="loading-screen">
-      <div className="loading-spinner">🏥</div>
-      <p>Loading ClinicCare...</p>
+  // ✅ Wait until role is loaded — don't redirect prematurely
+  if (userRole === null) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', flexDirection: 'column', gap: '1rem'
+      }}>
+        <div style={{ fontSize: '3rem' }}>🏥</div>
+        <p style={{ color: '#64748b', fontSize: '1rem' }}>Loading your portal...</p>
+      </div>
+    )
+  }
+
+  if (userRole === 'doctor') return <Navigate to="/doctor/dashboard" replace />
+  if (userRole === 'patient') return <Navigate to="/patient/dashboard" replace />
+  if (userRole === 'reception') return <Navigate to="/reception/dashboard" replace />
+
+  // Fallback
+  return <Navigate to="/dashboard" replace />
+}
+
+function ProtectedRoute({ children }) {
+  const { user, userRole } = useAuth()
+  if (!user) return <Navigate to="/" replace />
+  if (userRole === null) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ fontSize: '3rem' }}>🏥</div>
+      <p style={{ color: '#64748b' }}>Loading...</p>
     </div>
   )
+  return children
+}
 
+function AppRoutes() {
+  const { user } = useAuth()
   return (
-    <BrowserRouter>
-      {user && <Navbar user={user} />}
+    <>
+      {user && <Navbar />}
       <Routes>
-        <Route path="/" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
-        <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
-        <Route path="/appointments" element={user ? <Appointments /> : <Navigate to="/" />} />
-        <Route path="/lab-reports" element={user ? <LabReports /> : <Navigate to="/" />} />
-        <Route path="/inventory" element={user ? <Inventory /> : <Navigate to="/" />} />
+        {/* Auth */}
+        <Route path="/" element={!user ? <Login /> : <RoleRedirect />} />
+
+        {/* Legacy */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
+        <Route path="/lab-reports" element={<ProtectedRoute><LabReports /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+
+        {/* Doctor Portal */}
+        <Route path="/doctor/dashboard" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
+        <Route path="/doctor/appointments" element={<ProtectedRoute><DoctorAppointments /></ProtectedRoute>} />
+        <Route path="/doctor/availability" element={<ProtectedRoute><DoctorAvailability /></ProtectedRoute>} />
+        <Route path="/doctor/prescriptions" element={<ProtectedRoute><DoctorPrescriptions /></ProtectedRoute>} />
+        <Route path="/doctor/profile" element={<ProtectedRoute><DoctorProfile /></ProtectedRoute>} />
+
+        {/* Patient Portal */}
+        <Route path="/patient/dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
+        <Route path="/patient/book" element={<ProtectedRoute><BookAppointment /></ProtectedRoute>} />
+        <Route path="/patient/appointments" element={<ProtectedRoute><PatientAppointments /></ProtectedRoute>} />
+        <Route path="/patient/prescriptions" element={<ProtectedRoute><PatientPrescriptions /></ProtectedRoute>} />
+
+        {/* Reception Portal */}
+        <Route path="/reception/dashboard" element={<ProtectedRoute><ReceptionDashboard /></ProtectedRoute>} />
+        <Route path="/reception/appointments" element={<ProtectedRoute><ReceptionAppointments /></ProtectedRoute>} />
+        <Route path="/reception/doctors" element={<ProtectedRoute><ReceptionDoctors /></ProtectedRoute>} />
       </Routes>
-    </BrowserRouter>
+    </>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
