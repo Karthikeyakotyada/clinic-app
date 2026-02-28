@@ -11,7 +11,7 @@ function DoctorDashboard() {
 
   useEffect(() => {
     const fetch = async () => {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date().toLocaleDateString('en-CA')
       const snap = await getDocs(query(collection(db, 'appointments'), where('doctorId', '==', user.uid)))
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       const todayList = all.filter(a => a.date === today)

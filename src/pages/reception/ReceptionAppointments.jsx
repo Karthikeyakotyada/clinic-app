@@ -61,7 +61,7 @@ function ReceptionAppointments() {
   const [doctors, setDoctors] = useState({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+  const [filterDate, setFilterDate] = useState(new Date().toLocaleDateString('en-CA'))
   const [filterStatus, setFilterStatus] = useState('All')
 
   // ── Real-time listener — receptionist sees live updates instantly ──
@@ -85,7 +85,7 @@ function ReceptionAppointments() {
 
   /* ── Patient physically arrives → queue recalculates immediately ── */
   const handleArrived = async (appt) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
     const consultDur = doctors[appt.doctorId]?.consultationDuration || 20
 
     // Get current doctor delay from tracker (0 if no tracker yet)
@@ -129,7 +129,7 @@ function ReceptionAppointments() {
      When a patient leaves the Waiting state, everyone behind them moves
      up one position and their wait times reduce automatically.          */
   const handleStatusChange = async (appt, newStatus) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
     const consultDur = doctors[appt.doctorId]?.consultationDuration || 20
 
     // 1. Update this patient's status
@@ -182,7 +182,7 @@ function ReceptionAppointments() {
   })
 
   // Summary counts for today
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
   const todayAppts = appointments.filter(a => a.date === today)
   const waitingCount = todayAppts.filter(a => a.status === 'Waiting').length
   const inConsult = todayAppts.filter(a => a.status === 'In Consultation').length
@@ -257,7 +257,7 @@ function ReceptionAppointments() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['#', 'Patient', 'Doctor', 'Date', 'Time', 'Status', 'Token', 'Wait Time', 'Actions'].map(h => (
+                {['#', 'Patient', 'Doctor', 'Date', 'Time', 'Arrived At', 'Status', 'Token', 'Wait Time', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '12px 10px', textAlign: 'left', borderBottom: '2px solid #e2e8f0', fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>
                     {h}
                   </th>
@@ -266,7 +266,7 @@ function ReceptionAppointments() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No appointments found.</td></tr>
+                <tr><td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No appointments found.</td></tr>
               ) : filtered.map((a, i) => (
                 <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9', background: a.status === 'Waiting' ? '#fdfaff' : '#fff' }}>
                   <td style={{ padding: '10px' }}>{i + 1}</td>
@@ -274,6 +274,12 @@ function ReceptionAppointments() {
                   <td style={{ padding: '10px', color: '#475569' }}>{a.doctorName}</td>
                   <td style={{ padding: '10px', color: '#475569', fontSize: '0.85rem' }}>{a.date}</td>
                   <td style={{ padding: '10px', color: '#475569', fontSize: '0.85rem' }}>{a.timeSlot}</td>
+                  {/* Arrived At */}
+                  <td style={{ padding: '10px', fontSize: '0.8rem', color: '#475569', whiteSpace: 'nowrap' }}>
+                    {a.arrivedAt
+                      ? new Date(a.arrivedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : <span style={{ color: '#cbd5e1' }}>—</span>}
+                  </td>
 
                   {/* Status badge */}
                   <td style={{ padding: '10px' }}>

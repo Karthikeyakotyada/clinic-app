@@ -2,11 +2,23 @@ import { Link, useLocation } from 'react-router-dom'
 import { auth } from '../firebase/firebase'
 import { signOut } from 'firebase/auth'
 import { useAuth } from '../context/AuthContext'
-import NotificationBell from './NotificationBell'
+import { useSidebar } from '../context/SidebarContext'
 import '../styles/Navbar.css'
+
+/* ── Three-line hamburger icon ── */
+function HamburgerLines() {
+  return (
+    <>
+      <span />
+      <span />
+      <span />
+    </>
+  )
+}
 
 function Navbar() {
   const { user, userRole } = useAuth()
+  const { open, toggle } = useSidebar()
   const location = useLocation()
 
   const handleLogout = async () => { await signOut(auth) }
@@ -23,10 +35,14 @@ function Navbar() {
     { path: '/patient/book', icon: '➕', label: 'Book Appointment' },
     { path: '/patient/appointments', icon: '📅', label: 'My Appointments' },
     { path: '/patient/prescriptions', icon: '💊', label: 'Prescriptions' },
+    { path: '/patient/medical-records', icon: '🗂️', label: 'Medical Records' },
+    { path: '/patient/profile', icon: '👤', label: 'Profile' },
   ]
   const receptionLinks = [
     { path: '/reception/dashboard', icon: '📊', label: 'Dashboard' },
     { path: '/reception/appointments', icon: '📋', label: 'All Appointments' },
+    { path: '/reception/queue', icon: '🟢', label: 'Queue Mgmt' },
+    { path: '/reception/schedule', icon: '🗓️', label: 'Schedule' },
     { path: '/reception/doctors', icon: '👨‍⚕️', label: 'Doctors' },
     { path: '/reception/doctor-delay', icon: '⏰', label: 'Doctor Delay' },
     { path: '/reception/announcements', icon: '📢', label: 'Announcements' },
@@ -43,65 +59,91 @@ function Navbar() {
             { path: '/inventory', icon: '📦', label: 'Inventory' },
           ]
 
-  const roleLabel = userRole === 'doctor' ? '👨‍⚕️ Doctor' : userRole === 'patient' ? '🧑 Patient' : userRole === 'reception' ? '🗂️ Reception' : 'Admin'
+  const roleLabel =
+    userRole === 'doctor' ? '👨‍⚕️ Doctor' :
+      userRole === 'patient' ? '🧑 Patient' :
+        userRole === 'reception' ? '🗂️ Reception' : 'Admin'
 
   return (
-    <div className="navbar">
-      <div className="navbar-logo">
-        <span className="logo-icon">🏥</span>
-        <span className="logo-text">ClinicCare</span>
-      </div>
-      <nav className="navbar-links">
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+    <>
+      {/* ── Floating hamburger trigger (visible when sidebar is closed) ── */}
+      <button
+        className={`hamburger-trigger${open ? ' hidden' : ''}`}
+        onClick={toggle}
+        title="Open sidebar"
+        aria-label="Open navigation sidebar"
+      >
+        <HamburgerLines />
+      </button>
+
+      {/* ── Sidebar ── */}
+      <div className={`navbar${open ? '' : ' collapsed'}`}>
+
+        {/* Logo row + close button */}
+        <div className="navbar-logo">
+          <span className="logo-icon">🏥</span>
+          <span className="logo-text">ClinicCare</span>
+          {/* Hamburger (close) inside open sidebar */}
+          <button
+            className="sidebar-close-btn"
+            onClick={toggle}
+            title="Close sidebar"
+            aria-label="Close navigation sidebar"
           >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
-      <div className="navbar-bottom">
-        {/* Notification Bell for Reception */}
-        {userRole === 'reception' && (
-          <div style={{ padding: '0 0.5rem 0.75rem' }}>
-            <NotificationBell />
-          </div>
-        )}
-        {/* Queue Board quick-launch for Reception */}
-        {userRole === 'reception' && (
-          <a
-            href="/queue-display"
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '8px', padding: '8px 12px',
-              color: '#fff', textDecoration: 'none',
-              fontSize: '0.8rem', fontWeight: 600,
-              margin: '0 0.5rem 0.75rem',
-              transition: 'background 0.2s',
-            }}
-          >
-            <span>📺</span>
-            <span>Queue Board</span>
-            <span style={{ marginLeft: 'auto', fontSize: '0.65rem', opacity: 0.6 }}>↗️</span>
-          </a>
-        )}
-        <div className="user-info">
-          <div className="user-avatar">👤</div>
-          <div className="user-details">
-            <p className="user-email">{user?.email}</p>
-            <p className="user-role">{roleLabel}</p>
-          </div>
+            <HamburgerLines />
+          </button>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>🚪 Logout</button>
+
+        {/* Nav links */}
+        <nav className="navbar-links">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom section */}
+        <div className="navbar-bottom">
+          {/* Queue Board quick-launch for Reception */}
+          {userRole === 'reception' && (
+            <a
+              href="/queue-display"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '8px', padding: '8px 12px',
+                color: '#fff', textDecoration: 'none',
+                fontSize: '0.78rem', fontWeight: 600,
+                marginBottom: '0.6rem',
+                transition: 'background 0.2s',
+              }}
+            >
+              <span>📺</span>
+              <span>Queue Board</span>
+              <span style={{ marginLeft: 'auto', fontSize: '0.62rem', opacity: 0.6 }}>↗️</span>
+            </a>
+          )}
+
+          <div className="user-info">
+            <div className="user-avatar">👤</div>
+            <div className="user-details">
+              <p className="user-email">{user?.email}</p>
+              <p className="user-role">{roleLabel}</p>
+            </div>
+          </div>
+          <button className="logout-btn" onClick={handleLogout}>🚪 Logout</button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

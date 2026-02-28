@@ -296,7 +296,7 @@ function PatientAppointments() {
   const [appointments, setAppointments] = useState([])
   const [nowServingMap, setNowServingMap] = useState({})  // doctorId → current queuePosition serving
   const [loading, setLoading] = useState(true)
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
   // Real-time: patient's own appointments
   useEffect(() => {

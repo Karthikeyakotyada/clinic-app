@@ -237,7 +237,7 @@ function QueueDisplay() {
     const [doctors, setDoctors] = useState([])
     const [todayAppts, setTodayAppts] = useState([])
     const [announcements, setAnnouncements] = useState([])
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
 
     // Real-time: today's appointments
     useEffect(() => {

@@ -20,7 +20,7 @@ function PatientDashboard() {
   const [prescriptions, setPrescriptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [liveQueue, setLiveQueue] = useState(null)   // today's Waiting appointment (live)
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
   // Live listener — today's queue appointment (Waiting or In Consultation)
   useEffect(() => {
@@ -53,7 +53,7 @@ function PatientDashboard() {
     fetchData()
   }, [user])
 
-  const upcoming = appointments.filter(a => a.date >= new Date().toISOString().split('T')[0] && a.status !== 'Cancelled' && a.status !== 'Completed')
+  const upcoming = appointments.filter(a => a.date >= new Date().toLocaleDateString('en-CA') && a.status !== 'Cancelled' && a.status !== 'Completed')
   const stats = [
     { icon: '📅', label: 'Upcoming', value: upcoming.length, color: '#2563eb', bg: '#eff6ff' },
     { icon: '✅', label: 'Completed', value: appointments.filter(a => a.status === 'Completed').length, color: '#16a34a', bg: '#dcfce7' },

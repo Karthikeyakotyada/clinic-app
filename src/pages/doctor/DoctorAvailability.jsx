@@ -160,7 +160,7 @@ function DoctorAvailability() {
         </p>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <input type="date" value={newOffDate}
-            min={new Date().toISOString().split('T')[0]}
+            min={new Date().toLocaleDateString('en-CA')}
             onChange={e => setNewOffDate(e.target.value)}
             style={{ padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', flex: 1, minWidth: '160px', fontSize: '0.95rem' }}
           />

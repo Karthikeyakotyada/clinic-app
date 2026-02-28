@@ -1,22 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { db } from '../../firebase/firebase'
-import { collection, getDocs, query, where, addDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where, addDoc, onSnapshot } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 
 // ─── Constants ───────────────────────────────────────────────
 const SPECIALIZATIONS = [
-  { label: 'General',       icon: '🩺' },
-  { label: 'Cardiology',    icon: '❤️' },
-  { label: 'Dermatology',   icon: '🧴' },
-  { label: 'Neurology',     icon: '🧠' },
-  { label: 'Orthopedics',   icon: '🦴' },
-  { label: 'Pediatrics',    icon: '👶' },
-  { label: 'Gynecology',    icon: '🌸' },
-  { label: 'ENT',           icon: '👂' },
+  { label: 'General', icon: '🩺' },
+  { label: 'Cardiology', icon: '❤️' },
+  { label: 'Dermatology', icon: '🧴' },
+  { label: 'Neurology', icon: '🧠' },
+  { label: 'Orthopedics', icon: '🦴' },
+  { label: 'Pediatrics', icon: '👶' },
+  { label: 'Gynecology', icon: '🌸' },
+  { label: 'ENT', icon: '👂' },
   { label: 'Ophthalmology', icon: '👁️' },
 ]
 
-const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ function makeSlots(start, end, durationMin) {
   while (cur + durationMin <= endM) {
     const h = Math.floor(cur / 60)
     const m = cur % 60
-    result.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`)
+    result.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
     cur += durationMin
   }
   return result
@@ -57,9 +57,9 @@ function makeSlots(start, end, durationMin) {
 // Get slots for a doctor on a specific date
 // Returns: { slots: string[], reason: 'ok'|'off'|'dayoff'|'noavail' }
 function getSlotsForDate(doctor, dateStr) {
-  const avail    = doctor.availability          // may be null
+  const avail = doctor.availability          // may be null
   const duration = Number(doctor.consultationDuration) || 30
-  const dayName  = dayNameFromDateStr(dateStr)
+  const dayName = dayNameFromDateStr(dateStr)
 
   if (!avail) {
     // No availability doc → use default schedule (always show slots)
@@ -78,7 +78,7 @@ function getSlotsForDate(doctor, dateStr) {
   }
 
   const start = daySchedule.start || '09:00'
-  const end   = daySchedule.end   || '17:00'
+  const end = daySchedule.end || '17:00'
   return { slots: makeSlots(start, end, duration), reason: 'ok' }
 }
 
@@ -86,20 +86,20 @@ function getSlotsForDate(doctor, dateStr) {
 export default function BookAppointment() {
   const { user } = useAuth()
 
-  const [step, setStep]                     = useState(1)
+  const [step, setStep] = useState(1)
   const [specialization, setSpecialization] = useState('')
-  const [doctors, setDoctors]               = useState([])
-  const [loadingDocs, setLoadingDocs]       = useState(false)
+  const [doctors, setDoctors] = useState([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState(null)
-  const [selectedDate, setSelectedDate]     = useState('')
-  const [allSlots, setAllSlots]             = useState([])      // every slot for the day
-  const [bookedSlots, setBookedSlots]       = useState([])      // already booked
-  const [slotReason, setSlotReason]         = useState('')      // 'ok'|'off'|'dayoff'
-  const [loadingSlots, setLoadingSlots]     = useState(false)
-  const [selectedSlot, setSelectedSlot]     = useState('')
-  const [reason, setReason]                 = useState('')
-  const [booking, setBooking]               = useState(false)
-  const [success, setSuccess]               = useState(false)
+  const [selectedDate, setSelectedDate] = useState('')
+  const [allSlots, setAllSlots] = useState([])      // every slot for the day
+  const [bookedSlots, setBookedSlots] = useState([])      // already booked
+  const [slotReason, setSlotReason] = useState('')      // 'ok'|'off'|'dayoff'
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState('')
+  const [reason, setReason] = useState('')
+  const [booking, setBooking] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   // ── Step 2: Load doctors ──────────────────────────────────
   async function loadDoctors(spec) {
@@ -112,20 +112,20 @@ export default function BookAppointment() {
       )
       // Fetch all availability docs
       const availSnap = await getDocs(collection(db, 'doctorAvailability'))
-      const availMap  = {}
+      const availMap = {}
       availSnap.forEach(d => { availMap[d.id] = d.data() })
 
       const today = localToday()
 
       const list = docSnap.docs.map(d => {
-        const data  = d.data()
+        const data = d.data()
         const avail = availMap[d.id] ?? null
         const { slots: todaySlots } = getSlotsForDate({ ...data, availability: avail }, today)
         return {
           id: d.id,
           ...data,
-          availability:    avail,
-          availableToday:  todaySlots.length > 0,
+          availability: avail,
+          availableToday: todaySlots.length > 0,
         }
       })
 
@@ -150,50 +150,75 @@ export default function BookAppointment() {
       const { slots, reason } = getSlotsForDate(selectedDoctor, dateStr)
       setSlotReason(reason)
       setAllSlots(slots)
-
-      if (slots.length > 0) {
-        // Fetch booked slots (only non-cancelled)
-        const apptSnap = await getDocs(
-          query(
-            collection(db, 'appointments'),
-            where('doctorId', '==', selectedDoctor.id),
-            where('date',     '==', dateStr)
-          )
-        )
-        const taken = apptSnap.docs
-          .map(d => d.data())
-          .filter(d => d.status !== 'Cancelled')
-          .map(d => d.timeSlot)
-          .filter(Boolean)
-
-        setBookedSlots(taken)
-      }
     } catch (e) {
       console.error('loadSlots:', e)
     }
     setLoadingSlots(false)
   }
 
+  // Real-time listener for booked slots
+  useEffect(() => {
+    if (!selectedDate || !selectedDoctor) return
+
+    const q = query(
+      collection(db, 'appointments'),
+      where('doctorId', '==', selectedDoctor.id),
+      where('date', '==', selectedDate)
+    )
+
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const taken = snap.docs
+        .map(d => d.data())
+        .filter(d => d.status !== 'Cancelled')
+        .map(d => d.timeSlot)
+        .filter(Boolean)
+      setBookedSlots(taken)
+    })
+
+    return () => unsubscribe()
+  }, [selectedDate, selectedDoctor])
+
   // ── Step 4: Book ──────────────────────────────────────────
   async function confirmBooking() {
     if (!reason.trim() || booking) return
     setBooking(true)
     try {
+      // 1. Final Availability Check (Race Condition Prevention)
+      const checkSnap = await getDocs(
+        query(
+          collection(db, 'appointments'),
+          where('doctorId', '==', selectedDoctor.id),
+          where('date', '==', selectedDate),
+          where('timeSlot', '==', selectedSlot)
+        )
+      )
+
+      const alreadyBooked = checkSnap.docs.some(d => d.data().status !== 'Cancelled')
+      if (alreadyBooked) {
+        alert('Sorry, this slot was just booked by someone else. Please choose another slot.')
+        setStep(3) // Go back to slot selection
+        setSelectedSlot('')
+        setBooking(false)
+        return
+      }
+
+      // 2. Proceed with booking
       await addDoc(collection(db, 'appointments'), {
-        patientId:   user.uid,
+        patientId: user.uid,
         patientName: user.displayName || user.email,
-        doctorId:    selectedDoctor.id,
-        doctorName:  selectedDoctor.name,
-        department:  specialization,
-        date:        selectedDate,
-        timeSlot:    selectedSlot,
-        reason:      reason.trim(),
-        status:      'Scheduled',
-        createdAt:   new Date().toISOString(),
+        doctorId: selectedDoctor.id,
+        doctorName: selectedDoctor.name,
+        department: specialization,
+        date: selectedDate,
+        timeSlot: selectedSlot,
+        reason: reason.trim(),
+        status: 'Scheduled',
+        createdAt: new Date().toISOString(),
       })
       setSuccess(true)
     } catch (e) {
       console.error('confirmBooking:', e)
+      alert('Booking failed. Please try again.')
     }
     setBooking(false)
   }
@@ -206,17 +231,17 @@ export default function BookAppointment() {
   }
 
   // Derived
-  const freeSlots  = allSlots.filter(s => !bookedSlots.includes(s))
-  const today      = localToday()
+  const freeSlots = allSlots.filter(s => !bookedSlots.includes(s))
+  const today = localToday()
 
   // ── Shared styles ─────────────────────────────────────────
   const S = {
-    page:   { padding: '2rem', maxWidth: '920px', margin: '0 auto' },
-    card:   { background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: '1.25rem' },
-    btn:    (color) => ({ background: color, color: '#fff', border: 'none', borderRadius: '8px', padding: '11px 26px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem' }),
-    back:   { background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: '8px', padding: '11px 20px', cursor: 'pointer', fontWeight: 600 },
-    tag:    (bg, color) => ({ background: bg, color, padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700 }),
-    input:  { width: '100%', padding: '11px 13px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' },
+    page: { padding: '2rem', maxWidth: '920px', margin: '0 auto' },
+    card: { background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: '1.25rem' },
+    btn: (color) => ({ background: color, color: '#fff', border: 'none', borderRadius: '8px', padding: '11px 26px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem' }),
+    back: { background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: '8px', padding: '11px 20px', cursor: 'pointer', fontWeight: 600 },
+    tag: (bg, color) => ({ background: bg, color, padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700 }),
+    input: { width: '100%', padding: '11px 13px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' },
   }
 
   // ─────────────────────────── SUCCESS ─────────────────────
@@ -227,11 +252,11 @@ export default function BookAppointment() {
         <h2 style={{ color: '#16a34a' }}>Appointment Booked!</h2>
         <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '1rem', textAlign: 'left', marginBottom: '1.5rem' }}>
           {[
-            ['Doctor',         selectedDoctor?.name],
+            ['Doctor', selectedDoctor?.name],
             ['Specialization', specialization],
-            ['Date',           selectedDate],
-            ['Time',           selectedSlot],
-            ['Reason',         reason],
+            ['Date', selectedDate],
+            ['Time', selectedSlot],
+            ['Reason', reason],
           ].map(([l, v]) => (
             <div key={l} style={{ display: 'flex', gap: '8px', marginBottom: '5px', fontSize: '0.9rem' }}>
               <span style={{ color: '#64748b', minWidth: '120px' }}>{l}:</span>
@@ -251,13 +276,13 @@ export default function BookAppointment() {
 
       {/* Step bar */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '2rem' }}>
-        {['Specialization','Doctor','Time Slot','Confirm'].map((s, i) => (
+        {['Specialization', 'Doctor', 'Time Slot', 'Confirm'].map((s, i) => (
           <div key={i} style={{
             flex: 1, padding: '10px 4px', textAlign: 'center', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700,
-            background: step === i+1 ? '#2563eb' : step > i+1 ? '#dcfce7' : '#f1f5f9',
-            color:      step === i+1 ? '#fff'    : step > i+1 ? '#16a34a'  : '#94a3b8',
+            background: step === i + 1 ? '#2563eb' : step > i + 1 ? '#dcfce7' : '#f1f5f9',
+            color: step === i + 1 ? '#fff' : step > i + 1 ? '#16a34a' : '#94a3b8',
           }}>
-            {step > i+1 ? '✓ ' : `${i+1}. `}{s}
+            {step > i + 1 ? '✓ ' : `${i + 1}. `}{s}
           </div>
         ))}
       </div>
@@ -271,8 +296,8 @@ export default function BookAppointment() {
               <div key={s.label}
                 onClick={() => { setSpecialization(s.label); loadDoctors(s.label); setStep(2) }}
                 style={{ ...S.card, marginBottom: 0, textAlign: 'center', cursor: 'pointer', padding: '1.4rem 1rem', border: '2px solid #e2e8f0', transition: 'all 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor='#2563eb'; e.currentTarget.style.transform='translateY(-2px)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.transform='none' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none' }}
               >
                 <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{s.icon}</div>
                 <strong style={{ fontSize: '0.9rem' }}>{s.label}</strong>
@@ -352,7 +377,7 @@ export default function BookAppointment() {
               {selectedDoctor.specialization} · {selectedDoctor.consultationDuration || 30} min per slot
             </span>
             {!selectedDoctor.availability && (
-              <span style={{ marginLeft: '10px', ...S.tag('#dbeafe','#1d4ed8') }}>
+              <span style={{ marginLeft: '10px', ...S.tag('#dbeafe', '#1d4ed8') }}>
                 Flexible — any date works
               </span>
             )}
@@ -419,9 +444,9 @@ export default function BookAppointment() {
                   {/* Summary badges */}
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, fontSize: '1rem', flex: 1 }}>🕐 Available Slots</h3>
-                    <span style={S.tag('#dcfce7','#16a34a')}>{freeSlots.length} free</span>
-                    {bookedSlots.length > 0 && <span style={S.tag('#fee2e2','#dc2626')}>{bookedSlots.length} booked</span>}
-                    <span style={S.tag('#f1f5f9','#64748b')}>{allSlots.length} total</span>
+                    <span style={S.tag('#dcfce7', '#16a34a')}>{freeSlots.length} free</span>
+                    {bookedSlots.length > 0 && <span style={S.tag('#fee2e2', '#dc2626')}>{bookedSlots.length} booked</span>}
+                    <span style={S.tag('#f1f5f9', '#64748b')}>{allSlots.length} total</span>
                   </div>
 
                   {/* Morning slots */}
@@ -433,13 +458,12 @@ export default function BookAppointment() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {allSlots
                           .filter(s => Number(s.split(':')[0]) < 12)
+                          .filter(s => !bookedSlots.includes(s)) // 100% hidden if booked
                           .map(slot => {
-                            const booked   = bookedSlots.includes(slot)
                             const selected = selectedSlot === slot
                             return (
                               <button
                                 key={slot}
-                                disabled={booked}
                                 onClick={() => setSelectedSlot(slot)}
                                 style={{
                                   padding: '9px 16px',
@@ -447,13 +471,11 @@ export default function BookAppointment() {
                                   border: '2px solid',
                                   fontWeight: 700,
                                   fontSize: '0.9rem',
-                                  cursor: booked ? 'not-allowed' : 'pointer',
+                                  cursor: 'pointer',
                                   transition: 'all 0.15s',
-                                  borderColor: booked ? '#e2e8f0' : selected ? '#2563eb' : '#94a3b8',
-                                  background:  booked ? '#f8fafc'  : selected ? '#2563eb' : '#fff',
-                                  color:       booked ? '#cbd5e1'  : selected ? '#fff'    : '#1e293b',
-                                  opacity: booked ? 0.6 : 1,
-                                  textDecoration: booked ? 'line-through' : 'none',
+                                  borderColor: selected ? '#2563eb' : '#94a3b8',
+                                  background: selected ? '#2563eb' : '#fff',
+                                  color: selected ? '#fff' : '#1e293b',
                                 }}
                               >
                                 {slot}
@@ -473,13 +495,12 @@ export default function BookAppointment() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {allSlots
                           .filter(s => Number(s.split(':')[0]) >= 12)
+                          .filter(s => !bookedSlots.includes(s)) // 100% hidden if booked
                           .map(slot => {
-                            const booked   = bookedSlots.includes(slot)
                             const selected = selectedSlot === slot
                             return (
                               <button
                                 key={slot}
-                                disabled={booked}
                                 onClick={() => setSelectedSlot(slot)}
                                 style={{
                                   padding: '9px 16px',
@@ -487,13 +508,11 @@ export default function BookAppointment() {
                                   border: '2px solid',
                                   fontWeight: 700,
                                   fontSize: '0.9rem',
-                                  cursor: booked ? 'not-allowed' : 'pointer',
+                                  cursor: 'pointer',
                                   transition: 'all 0.15s',
-                                  borderColor: booked ? '#e2e8f0' : selected ? '#2563eb' : '#94a3b8',
-                                  background:  booked ? '#f8fafc'  : selected ? '#2563eb' : '#fff',
-                                  color:       booked ? '#cbd5e1'  : selected ? '#fff'    : '#1e293b',
-                                  opacity: booked ? 0.6 : 1,
-                                  textDecoration: booked ? 'line-through' : 'none',
+                                  borderColor: selected ? '#2563eb' : '#94a3b8',
+                                  background: selected ? '#2563eb' : '#fff',
+                                  color: selected ? '#fff' : '#1e293b',
                                 }}
                               >
                                 {slot}
@@ -538,10 +557,10 @@ export default function BookAppointment() {
             {/* Summary grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1.5rem' }}>
               {[
-                ['👨‍⚕️ Doctor',        selectedDoctor?.name],
+                ['👨‍⚕️ Doctor', selectedDoctor?.name],
                 ['🏥 Specialization', specialization],
-                ['📅 Date',           selectedDate],
-                ['⏰ Time Slot',      selectedSlot],
+                ['📅 Date', selectedDate],
+                ['⏰ Time Slot', selectedSlot],
               ].map(([label, value]) => (
                 <div key={label} style={{ background: '#f8fafc', borderRadius: '8px', padding: '12px' }}>
                   <p style={{ margin: '0 0 3px', fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{label}</p>

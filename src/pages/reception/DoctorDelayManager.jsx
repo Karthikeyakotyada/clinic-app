@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
     collection, onSnapshot, query, where,
     updateDoc, doc, addDoc, serverTimestamp, Timestamp, getDocs,
+    writeBatch
 } from 'firebase/firestore'
 import { db } from '../../firebase/firebase'
 import { recalculateQueue } from '../../utils/queueEngine'
@@ -185,8 +186,71 @@ function DoctorDelayManager() {
     const [trackers, setTrackers] = useState([])
     const [doctors, setDoctors] = useState({})
     const [loading, setLoading] = useState(true)
+    const [initializing, setInitializing] = useState(false)
     const [showResolved, setShowResolved] = useState(false)
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
+
+    const handleInitializeTrackers = async () => {
+        setInitializing(true)
+        try {
+            // 1. Get all appointments for today
+            const q = query(collection(db, 'appointments'), where('date', '==', today))
+            const snap = await getDocs(q)
+
+            if (snap.empty) {
+                alert('No appointments found for today.')
+                setInitializing(false)
+                return
+            }
+
+            // 2. Identify unique doctors who have appointments today
+            const uniqueDoctors = {}
+            snap.docs.forEach(d => {
+                const data = d.data()
+                if (!uniqueDoctors[data.doctorId]) {
+                    uniqueDoctors[data.doctorId] = data.doctorName
+                }
+            })
+
+            // 3. Check for existing trackers for these doctors today
+            const trackerSnap = await getDocs(query(collection(db, 'doctorDelayTrackers'), where('date', '==', today)))
+            const existingDocIds = new Set(trackerSnap.docs.map(d => d.data().doctorId))
+
+            // 4. Create missing trackers
+            const batch = writeBatch(db)
+            let count = 0
+
+            for (const [id, name] of Object.entries(uniqueDoctors)) {
+                if (!existingDocIds.has(id)) {
+                    const newRef = doc(collection(db, 'doctorDelayTrackers'))
+                    batch.set(newRef, {
+                        doctorId: id,
+                        doctorName: name,
+                        date: today,
+                        arrivalConfirmedAt: null,
+                        doctorStatus: 'Pending',
+                        lastNotifiedAt: null,
+                        active: true,
+                        delayMinutes: 0,
+                        waitingPatients: snap.docs.filter(d => d.data().doctorId === id && d.data().status === 'Waiting').length,
+                        createdAt: serverTimestamp()
+                    })
+                    count++
+                }
+            }
+
+            if (count > 0) {
+                await batch.commit()
+                alert(`Initialized ${count} doctor trackers for today.`)
+            } else {
+                alert('All doctor trackers for today are already initialized.')
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Failed to initialize trackers.')
+        }
+        setInitializing(false)
+    }
 
     useEffect(() => {
         const q = query(collection(db, 'doctorDelayTrackers'), where('date', '==', today))
@@ -277,6 +341,20 @@ function DoctorDelayManager() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                        onClick={handleInitializeTrackers}
+                        disabled={initializing}
+                        style={{
+                            background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '8px',
+                            padding: '8px 16px', cursor: initializing ? 'wait' : 'pointer',
+                            fontSize: '0.82rem', fontWeight: 700, transition: 'all 0.2s',
+                            boxShadow: '0 2px 6px #7c3aed33'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'none' }}
+                    >
+                        {initializing ? '⏳ Initializing...' : '⚡ Initialize Today\'s Trackers'}
+                    </button>
                     <span style={{ background: active.length > 0 ? '#fef9c3' : '#dcfce7', color: active.length > 0 ? '#ca8a04' : '#16a34a', padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 700 }}>
                         {active.length > 0 ? `⏳ ${active.length} Active` : '✅ All Clear'}
                     </span>

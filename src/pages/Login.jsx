@@ -9,9 +9,9 @@ import { doc, setDoc } from 'firebase/firestore'
 import '../styles/Login.css'
 
 const ROLES = [
-  { value: 'patient',   label: '🧑 Patient',   desc: 'Book appointments & view prescriptions' },
-  { value: 'doctor',    label: '👨‍⚕️ Doctor',    desc: 'Manage appointments & prescriptions'   },
-  { value: 'reception', label: '🗂️ Reception', desc: 'Manage all appointments & arrivals'     },
+  { value: 'patient', label: '🧑 Patient', desc: 'Book appointments & view prescriptions' },
+  { value: 'doctor', label: '👨‍⚕️ Doctor', desc: 'Manage appointments & prescriptions' },
+  { value: 'reception', label: '🗂️ Reception', desc: 'Manage all appointments & arrivals' },
 ]
 
 const SPECIALIZATIONS = [
@@ -23,23 +23,23 @@ function Login() {
   const [tab, setTab] = useState('login')
 
   // Login state
-  const [loginEmail, setLoginEmail]       = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
-  const [loginError, setLoginError]       = useState('')
-  const [loginLoading, setLoginLoading]   = useState(false)
-  const [showLoginPwd, setShowLoginPwd]   = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [showLoginPwd, setShowLoginPwd] = useState(false)
 
   // Signup state
-  const [signupName, setSignupName]             = useState('')
-  const [signupEmail, setSignupEmail]           = useState('')
-  const [signupPassword, setSignupPassword]     = useState('')
-  const [signupConfirm, setSignupConfirm]       = useState('')
-  const [signupRole, setSignupRole]             = useState('patient')
-  const [signupSpec, setSignupSpec]             = useState('')
-  const [signupError, setSignupError]           = useState('')
-  const [signupLoading, setSignupLoading]       = useState(false)
-  const [signupSuccess, setSignupSuccess]       = useState(false)
-  const [showSignupPwd, setShowSignupPwd]       = useState(false)
+  const [signupName, setSignupName] = useState('')
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupConfirm, setSignupConfirm] = useState('')
+  const [signupRole, setSignupRole] = useState('patient')
+  const [signupSpec, setSignupSpec] = useState('')
+  const [signupError, setSignupError] = useState('')
+  const [signupLoading, setSignupLoading] = useState(false)
+  const [signupSuccess, setSignupSuccess] = useState(false)
+  const [showSignupPwd, setShowSignupPwd] = useState(false)
 
   // ── LOGIN ──
   const handleLogin = async (e) => {
@@ -50,11 +50,11 @@ function Login() {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
     } catch (err) {
       const msg =
-        err.code === 'auth/user-not-found'      ? 'No account found with this email.'     :
-        err.code === 'auth/wrong-password'       ? 'Incorrect password. Try again.'        :
-        err.code === 'auth/invalid-credential'   ? 'Invalid email or password.'            :
-        err.code === 'auth/too-many-requests'    ? 'Too many attempts. Try again later.'   :
-                                                   'Login failed. Please try again.'
+        err.code === 'auth/user-not-found' ? 'No account found with this email.' :
+          err.code === 'auth/wrong-password' ? 'Incorrect password. Try again.' :
+            err.code === 'auth/invalid-credential' ? 'Invalid email or password.' :
+              err.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.' :
+                'Login failed. Please try again.'
       setLoginError(msg)
       setLoginLoading(false)
     }
@@ -121,9 +121,9 @@ function Login() {
     } catch (err) {
       const msg =
         err.code === 'auth/email-already-in-use' ? 'This email is already registered. Please sign in.' :
-        err.code === 'auth/invalid-email'         ? 'Invalid email address.'                           :
-        err.code === 'auth/weak-password'         ? 'Password is too weak (min 6 characters).'         :
-                                                    'Signup failed. Please try again.'
+          err.code === 'auth/invalid-email' ? 'Invalid email address.' :
+            err.code === 'auth/weak-password' ? 'Password is too weak (min 6 characters).' :
+              'Signup failed. Please try again.'
       setSignupError(msg)
       setSignupLoading(false)
     }
@@ -142,7 +142,7 @@ function Login() {
       {/* ── LEFT PANEL ── */}
       <div className="login-left">
         <div className="login-left-content">
-          <div className="hospital-icon">🏥</div>
+          <span className="hospital-icon">🏥</span>
           <h1>ClinicCare</h1>
           <p>Smart Healthcare Management System</p>
           <div className="features-list">
@@ -153,15 +153,22 @@ function Login() {
             <div className="feature-item">⏳ Real-time Waiting Time</div>
           </div>
         </div>
+        <div className="login-left-badge">🔐 SECURE &amp; HIPAA COMPLIANT</div>
       </div>
 
       {/* ── RIGHT PANEL ── */}
       <div className="login-right">
         <div className="login-box">
 
+          {/* Mini brand inside card */}
+          <div className="login-box-brand">
+            <span>🏥</span>
+            <span>ClinicCare</span>
+          </div>
+
           {/* Tabs */}
           <div className="auth-tabs">
-            <button className={`auth-tab ${tab === 'login'  ? 'active' : ''}`} onClick={() => switchTab('login')}>Sign In</button>
+            <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => switchTab('login')}>Sign In</button>
             <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => switchTab('signup')}>Sign Up</button>
           </div>
 

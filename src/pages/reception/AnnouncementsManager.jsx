@@ -13,23 +13,30 @@ function AnnouncementsManager() {
     useEffect(() => {
         const q = query(collection(db, 'announcements'))
         return onSnapshot(q, snap => {
-            setAnnouncements(
-                snap.docs
-                    .map(d => ({ id: d.id, ...d.data() }))
-                    .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
-            )
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            list.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis?.() ?? Date.now()
+                const timeB = b.createdAt?.toMillis?.() ?? Date.now()
+                return timeB - timeA
+            })
+            setAnnouncements(list)
         })
     }, [])
 
     const handleAdd = async () => {
         if (!text.trim()) return
         setAdding(true)
-        await addDoc(collection(db, 'announcements'), {
-            text: text.trim(),
-            active: true,
-            createdAt: serverTimestamp(),
-        })
-        setText('')
+        try {
+            await addDoc(collection(db, 'announcements'), {
+                text: text.trim(),
+                active: true,
+                createdAt: serverTimestamp(),
+            })
+            setText('')
+        } catch (err) {
+            console.error('handleAdd error:', err)
+            alert('Failed to add announcement: ' + err.message)
+        }
         setAdding(false)
     }
 

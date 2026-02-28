@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { SidebarProvider, useSidebar } from './context/SidebarContext'
 import Login from './pages/Login'
 import Navbar from './components/Navbar'
 import Dashboard from './pages/Dashboard'
@@ -18,12 +19,16 @@ import PatientDashboard from './pages/patient/PatientDashboard'
 import BookAppointment from './pages/patient/BookAppointment'
 import PatientAppointments from './pages/patient/PatientAppointments'
 import PatientPrescriptions from './pages/patient/PatientPrescriptions'
+import PatientProfile from './pages/patient/PatientProfile'
+import PatientMedicalRecords from './pages/patient/PatientMedicalRecords'
 // Reception
 import ReceptionDashboard from './pages/reception/ReceptionDashboard'
 import ReceptionAppointments from './pages/reception/ReceptionAppointments'
 import ReceptionDoctors from './pages/reception/ReceptionDoctors'
 import DoctorDelayManager from './pages/reception/DoctorDelayManager'
 import AnnouncementsManager from './pages/reception/AnnouncementsManager'
+import ReceptionSchedule from './pages/reception/ReceptionSchedule'
+import ReceptionQueue from './pages/reception/ReceptionQueue'
 // Public
 import QueueDisplay from './pages/QueueDisplay'
 import './App.css'
@@ -68,42 +73,49 @@ function ProtectedRoute({ children }) {
 
 function AppRoutes() {
   const { user } = useAuth()
+  const { open } = useSidebar()
   return (
     <>
       {user && <Navbar />}
-      <Routes>
-        {/* Auth */}
-        <Route path="/" element={!user ? <Login /> : <RoleRedirect />} />
+      <div className={user ? `main-content${!open ? ' sidebar-collapsed' : ''}` : ''}>
+        <Routes>
+          {/* Auth */}
+          <Route path="/" element={!user ? <Login /> : <RoleRedirect />} />
 
-        {/* Legacy */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
-        <Route path="/lab-reports" element={<ProtectedRoute><LabReports /></ProtectedRoute>} />
-        <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+          {/* Legacy */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
+          <Route path="/lab-reports" element={<ProtectedRoute><LabReports /></ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
 
-        {/* Doctor Portal */}
-        <Route path="/doctor/dashboard" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
-        <Route path="/doctor/appointments" element={<ProtectedRoute><DoctorAppointments /></ProtectedRoute>} />
-        <Route path="/doctor/availability" element={<ProtectedRoute><DoctorAvailability /></ProtectedRoute>} />
-        <Route path="/doctor/prescriptions" element={<ProtectedRoute><DoctorPrescriptions /></ProtectedRoute>} />
-        <Route path="/doctor/profile" element={<ProtectedRoute><DoctorProfile /></ProtectedRoute>} />
+          {/* Doctor Portal */}
+          <Route path="/doctor/dashboard" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
+          <Route path="/doctor/appointments" element={<ProtectedRoute><DoctorAppointments /></ProtectedRoute>} />
+          <Route path="/doctor/availability" element={<ProtectedRoute><DoctorAvailability /></ProtectedRoute>} />
+          <Route path="/doctor/prescriptions" element={<ProtectedRoute><DoctorPrescriptions /></ProtectedRoute>} />
+          <Route path="/doctor/profile" element={<ProtectedRoute><DoctorProfile /></ProtectedRoute>} />
 
-        {/* Patient Portal */}
-        <Route path="/patient/dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
-        <Route path="/patient/book" element={<ProtectedRoute><BookAppointment /></ProtectedRoute>} />
-        <Route path="/patient/appointments" element={<ProtectedRoute><PatientAppointments /></ProtectedRoute>} />
-        <Route path="/patient/prescriptions" element={<ProtectedRoute><PatientPrescriptions /></ProtectedRoute>} />
+          {/* Patient Portal */}
+          <Route path="/patient/dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
+          <Route path="/patient/book" element={<ProtectedRoute><BookAppointment /></ProtectedRoute>} />
+          <Route path="/patient/appointments" element={<ProtectedRoute><PatientAppointments /></ProtectedRoute>} />
+          <Route path="/patient/prescriptions" element={<ProtectedRoute><PatientPrescriptions /></ProtectedRoute>} />
+          <Route path="/patient/profile" element={<ProtectedRoute><PatientProfile /></ProtectedRoute>} />
+          <Route path="/patient/medical-records" element={<ProtectedRoute><PatientMedicalRecords /></ProtectedRoute>} />
 
-        {/* Reception Portal */}
-        <Route path="/reception/dashboard" element={<ProtectedRoute><ReceptionDashboard /></ProtectedRoute>} />
-        <Route path="/reception/appointments" element={<ProtectedRoute><ReceptionAppointments /></ProtectedRoute>} />
-        <Route path="/reception/doctors" element={<ProtectedRoute><ReceptionDoctors /></ProtectedRoute>} />
-        <Route path="/reception/doctor-delay" element={<ProtectedRoute><DoctorDelayManager /></ProtectedRoute>} />
-        <Route path="/reception/announcements" element={<ProtectedRoute><AnnouncementsManager /></ProtectedRoute>} />
+          {/* Reception Portal */}
+          <Route path="/reception/dashboard" element={<ProtectedRoute><ReceptionDashboard /></ProtectedRoute>} />
+          <Route path="/reception/appointments" element={<ProtectedRoute><ReceptionAppointments /></ProtectedRoute>} />
+          <Route path="/reception/doctors" element={<ProtectedRoute><ReceptionDoctors /></ProtectedRoute>} />
+          <Route path="/reception/doctor-delay" element={<ProtectedRoute><DoctorDelayManager /></ProtectedRoute>} />
+          <Route path="/reception/announcements" element={<ProtectedRoute><AnnouncementsManager /></ProtectedRoute>} />
+          <Route path="/reception/schedule" element={<ProtectedRoute><ReceptionSchedule /></ProtectedRoute>} />
+          <Route path="/reception/queue" element={<ProtectedRoute><ReceptionQueue /></ProtectedRoute>} />
 
-        {/* Public — No login required (waiting room TV board) */}
-        <Route path="/queue-display" element={<QueueDisplay />} />
-      </Routes>
+          {/* Public — No login required (waiting room TV board) */}
+          <Route path="/queue-display" element={<QueueDisplay />} />
+        </Routes>
+      </div>
     </>
   )
 }
@@ -112,9 +124,11 @@ function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <SidebarProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </SidebarProvider>
       </NotificationProvider>
     </AuthProvider>
   )

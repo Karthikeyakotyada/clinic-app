@@ -24,7 +24,10 @@ exports.analyzeLabReport = functions.https.onCall(async (data, _context) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-pro",
+      apiVersion: "v1"
+    });
 
     const currentReportText = report.extractedText || `Report file: ${report.originalFileName}`;
 

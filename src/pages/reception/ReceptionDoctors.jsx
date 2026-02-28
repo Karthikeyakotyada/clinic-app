@@ -13,7 +13,7 @@ function ReceptionDoctors() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date().toLocaleDateString('en-CA')
       const todayDay = DAY_NAMES[new Date().getDay()]
 
       const dSnap = await getDocs(collection(db, 'doctors'))
@@ -43,7 +43,7 @@ function ReceptionDoctors() {
   const isAvailableToday = (doctorId) => {
     const avail = availability[doctorId]
     if (!avail) return false
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
     if (avail.offDates?.includes(today)) return false
     const todayDay = DAY_NAMES[new Date().getDay()]
     return !!avail.workingDays?.[todayDay]

@@ -65,7 +65,7 @@ function ReceptionDashboard() {
   const [loading, setLoading] = useState(true)
   const [checking, setChecking] = useState(null)  // id being checked in
   const [recentCheckIns, setRecentCheckIns] = useState([])  // from local session
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
   /* ── Real-time: today's appointments ── */
   useEffect(() => {
@@ -85,6 +85,15 @@ function ReceptionDashboard() {
       const m = {}
       snap.docs.forEach(d => { m[d.id] = d.data() })
       setDoctors(m)
+    })
+  }, [])
+
+  /* ── Real-time: active announcements (for ticker) ── */
+  const [announcements, setAnnouncements] = useState([])
+  useEffect(() => {
+    const q = query(collection(db, 'announcements'), where('active', '==', true))
+    return onSnapshot(q, snap => {
+      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
   }, [])
 
@@ -166,6 +175,14 @@ function ReceptionDashboard() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Link to="/reception/queue"
+              style={{ background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '8px 14px', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 700 }}>
+              🟢 Queue Mgmt
+            </Link>
+            <Link to="/reception/schedule"
+              style={{ background: '#f3e8ff', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '8px 14px', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 700 }}>
+              🗓️ Schedule
+            </Link>
             <Link to="/reception/doctor-delay"
               style={{ background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 14px', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 700 }}>
               ⏰ Delay Manager
@@ -188,6 +205,44 @@ function ReceptionDashboard() {
           </div>
         ))}
       </div>
+
+      {/* ── Per-Doctor Queue Summary ── */}
+      {!loading && (() => {
+        const doctorIds = [...new Set(todayAppts.map(a => a.doctorId))]
+        const perDoctorQueues = doctorIds.map(did => {
+          const waiting = todayAppts.filter(a => a.doctorId === did && a.status === 'Waiting').sort((a, b) => (a.queuePosition ?? 999) - (b.queuePosition ?? 999))
+          const inConsult = todayAppts.find(a => a.doctorId === did && a.status === 'In Consultation')
+          const doctorName = (doctors[did]?.name) || todayAppts.find(a => a.doctorId === did)?.doctorName || 'Unknown'
+          return { did, doctorName, waiting, inConsult }
+        }).filter(d => d.waiting.length > 0 || d.inConsult)
+        if (perDoctorQueues.length === 0) return null
+        return (
+          <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'linear-gradient(90deg,#065f46,#059669)', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, color: '#fff', fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.04em' }}>🟢 PER-DOCTOR QUEUE SUMMARY</h2>
+              <Link to="/reception/queue" style={{ color: '#6ee7b7', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Manage Queue →</Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))', gap: '1px', background: '#f1f5f9' }}>
+              {perDoctorQueues.map(({ did, doctorName, waiting, inConsult }) => (
+                <div key={did} style={{ background: '#fff', padding: '12px 16px' }}>
+                  <div style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.88rem', marginBottom: '6px' }}>👨‍⚕️ {doctorName}</div>
+                  {inConsult && (
+                    <div style={{ fontSize: '0.75rem', color: '#0891b2', fontWeight: 700, marginBottom: '4px' }}>🩺 #{inConsult.queuePosition} {inConsult.patientName} – In Consult</div>
+                  )}
+                  {waiting.slice(0, 4).map((a, i) => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 0' }}>
+                      <span style={{ background: i === 0 ? '#7c3aed' : '#e2e8f0', color: i === 0 ? '#fff' : '#64748b', padding: '1px 7px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: 800 }}>#{a.queuePosition}</span>
+                      <span style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600, flex: 1 }}>{a.patientName}</span>
+                      {a.waitingTime != null && <span style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 700 }}>~{a.waitingTime}m</span>}
+                    </div>
+                  ))}
+                  {waiting.length > 4 && <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '4px' }}>+{waiting.length - 4} more</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem', alignItems: 'start' }}>
 
@@ -333,6 +388,30 @@ function ReceptionDashboard() {
         ═══════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
+          {/* Live Announcements View */}
+          <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, color: '#fff', fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.04em' }}>
+                📢 LIVE ANNOUNCEMENTS
+              </h2>
+              <Link to="/reception/announcements" style={{ color: '#bfdbfe', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>Manage →</Link>
+            </div>
+            <div style={{ padding: '12px 14px' }}>
+              {announcements.length === 0 ? (
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center' }}>No active announcements</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {announcements.map(a => (
+                    <div key={a.id} style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', color: '#1e293b', background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                      <span style={{ flexShrink: 0 }}>📢</span>
+                      <span style={{ fontWeight: 600 }}>{a.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Current Queue */}
           <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
             <div style={{ background: 'linear-gradient(90deg, #065f46, #16a34a)', padding: '12px 18px' }}>
@@ -393,33 +472,6 @@ function ReceptionDashboard() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Quick actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {[
-              { to: '/reception/doctor-delay', label: '⏰ Delay Manager', bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
-              { to: '/reception/announcements', label: '📢 Announcements', bg: '#eff6ff', color: '#1e40af', border: '#bfdbfe' },
-              { to: '/reception/doctors', label: '👨‍⚕️ Doctors', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
-              { to: '/queue-display', label: '📺 Queue Board', bg: '#0a0f1e', color: '#93c5fd', border: '#1e3a8a', external: true },
-            ].map(b => (
-              <Link
-                key={b.to}
-                to={b.to}
-                target={b.external ? '_blank' : undefined}
-                rel={b.external ? 'noreferrer' : undefined}
-                style={{
-                  background: b.bg, color: b.color,
-                  border: `1px solid ${b.border}`,
-                  borderRadius: '10px', padding: '10px 12px',
-                  textDecoration: 'none', fontSize: '0.78rem',
-                  fontWeight: 700, textAlign: 'center',
-                  display: 'block',
-                }}
-              >
-                {b.label}
-              </Link>
-            ))}
           </div>
 
           {/* Wait time info card */}
