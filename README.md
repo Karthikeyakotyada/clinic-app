@@ -1,16 +1,56 @@
-# React + Vite
+# Clinic Appointment Booking App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 📌 Project Overview
+This is a web-based Clinic Appointment Booking application designed to simplify the process of booking and managing doctor appointments.  
+The system ensures fixed time slots, avoids overbooking, and provides a structured flow for patients, doctors, and reception staff.
 
-Currently, two official plugins are available:
+This project was developed as part of a college project with a strong focus on real-world workflow and scalability.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🎯 Problem Statement
+In many clinics, appointment booking is done manually, leading to:
+- Overlapping appointments
+- Long waiting times
+- Poor queue management
+- Lack of transparency for patients
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This application solves these issues by providing a structured and time-slot–based appointment system.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 👥 User Roles
+- **Patient**
+  - View doctors
+  - Book available time slots
+  - View appointment status
+
+- **Doctor**
+  - Manage availability
+  - View scheduled appointments
+
+- **Reception**
+  - Manage appointment queue
+  - Handle doctor delays
+  - View daily schedules
+
+---
+
+## ✨ Key Features
+- Fixed time-slot appointment booking
+- No overbooking logic
+- Reception dashboard for queue management
+- Doctor delay handling
+- Clean and modular UI
+- Scalable project structure
+
+---
+
+## 🛠 Tech Stack
+- **Frontend:** React.js, Vite
+- **Styling:** CSS
+- **Backend (planned):** Firebase / Node.js
+- **Version Control:** Git & GitHub
+
+---
+
