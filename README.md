@@ -54,4 +54,3 @@ This application solves these issues by providing a structured and time-slot–b
 
 ---
 
-## 📂 Project Structure (Simplified)
