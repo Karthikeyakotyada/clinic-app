@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────
+    // HELPER FUNCTIONS
+    // ─────────────────────────────────────────
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isDoctor() {
+      return isLoggedIn() && getUserRole() == 'doctor';
+    }
+
+    function isPatient() {
+      return isLoggedIn() && getUserRole() == 'patient';
+    }
+
+    function isReception() {
+      return isLoggedIn() && getUserRole() == 'reception';
+    }
+
+    function isOwner(uid) {
+      return isLoggedIn() && request.auth.uid == uid;
+    }
+
+    // ─────────────────────────────────────────
+    // USERS COLLECTION
+    // ─────────────────────────────────────────
+    match /users/{uid} {
+      allow create: if isLoggedIn() && request.auth.uid == uid;
+      allow read, update: if isOwner(uid);
+      allow read: if isReception();
+      allow delete: if false;
+    }
+
+    // ─────────────────────────────────────────
+    // DOCTORS COLLECTION
+    // ─────────────────────────────────────────
+    match /doctors/{doctorId} {
+      allow create: if isLoggedIn() && request.auth.uid == doctorId;
+      allow read, update: if isOwner(doctorId);
+      allow read: if isPatient() || isReception();
+      allow delete: if false;
+    }
+
+    // ─────────────────────────────────────────
+    // DOCTOR AVAILABILITY COLLECTION
+    // ─────────────────────────────────────────
+    match /doctorAvailability/{doctorId} {
+      allow read, write: if isOwner(doctorId);
+      allow read: if isPatient() || isReception();
+    }
+
+    // ─────────────────────────────────────────
+    // APPOINTMENTS COLLECTION
+    // ─────────────────────────────────────────
+    match /appointments/{appointmentId} {
+      // Patients can create appointments for themselves
+      allow create: if isPatient() && request.resource.data.patientId == request.auth.uid;
+      
+      // Patients, Doctors, and Reception can read appointments 
+      // (Patients need this to check slot availability)
+      allow read: if isLoggedIn();
+      
+      // Doctors can read their own appointments
+      allow read: if isDoctor() && resource.data.doctorId == request.auth.uid;
+      
+      // Doctors can update appointments (status, reports) but not core slot data
+      allow update: if isDoctor()
+        && resource.data.doctorId == request.auth.uid
+        && request.resource.data.patientId == resource.data.patientId
+        && request.resource.data.doctorId == resource.data.doctorId
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.timeSlot == resource.data.timeSlot;
+
+      // Reception can do everything for management
+      allow read, write: if isReception();
+      
+      allow delete: if false;
+    }
+
+    // ─────────────────────────────────────────
+    // PRESCRIPTIONS COLLECTION
+    // ─────────────────────────────────────────
+    match /prescriptions/{prescriptionId} {
+      allow create: if isDoctor() && request.resource.data.doctorId == request.auth.uid;
+      allow read: if isDoctor() && resource.data.doctorId == request.auth.uid;
+      allow update: if isDoctor() && resource.data.doctorId == request.auth.uid;
+      allow read: if isPatient() && resource.data.patientId == request.auth.uid;
+      allow read: if isReception();
+      allow delete: if false;
+    }
+
+    // ─────────────────────────────────────────
+    // LAB REPORTS COLLECTION
+    // ─────────────────────────────────────────
+    match /labReports/{reportId} {
+      allow read, write: if isLoggedIn();
+    }
+
+    // ─────────────────────────────────────────
+    // INVENTORY COLLECTION
+    // ─────────────────────────────────────────
+    match /inventory/{itemId} {
+      allow read, write: if isLoggedIn();
+    }
+
+    // ─────────────────────────────────────────
+    // DOCTOR DELAY TRACKERS
+    // ─────────────────────────────────────────
+    match /doctorDelayTrackers/{trackerId} {
+      allow read, write: if isReception();
+    }
+
+    // ─────────────────────────────────────────
+    // RECEPTION NOTIFICATIONS
+    // ─────────────────────────────────────────
+    match /receptionNotifications/{notifId} {
+      allow read, write: if isReception();
+    }
+
+    // ─────────────────────────────────────────  ← NEW ✅
+    // MEDICAL RECORDS COLLECTION
+    // ─────────────────────────────────────────
+    match /medicalRecords/{docId} {
+      // Let patients read/delete their own existing records and upload new ones
+      // Let doctors read all patient medical records
+      allow read: if isDoctor() || (isLoggedIn() && request.auth.uid == resource.data.patientId);
+      allow delete: if isLoggedIn() && request.auth.uid == resource.data.patientId;
+      allow create: if isLoggedIn() && request.auth.uid == request.resource.data.patientId;
+      allow update: if isOwner(resource.data.patientId) || isOwner(request.resource.data.patientId);
+    }
+
+    // ─────────────────────────────────────────
+    // ANNOUNCEMENTS COLLECTION
+    // ─────────────────────────────────────────
+    match /announcements/{id} {
+      allow read: if isLoggedIn();
+      allow write: if isReception();
+    }
+
+  }
+}
